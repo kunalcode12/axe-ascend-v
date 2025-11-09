@@ -8,6 +8,7 @@ export const ArenaMonitor = ({
   onToggle,
   arenaStatus,
   countdown,
+  onDisconnect,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     countdown: true,
@@ -165,7 +166,10 @@ export const ArenaMonitor = ({
   }
 
   return (
-    <div className="fixed inset-4 z-50 bg-black/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/50 shadow-2xl pointer-events-auto flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-4 z-50 bg-black/95 backdrop-blur-xl rounded-2xl border-2 border-purple-500/50 shadow-2xl pointer-events-auto flex flex-col overflow-hidden"
+      data-ui-element
+    >
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600/80 to-pink-600/80 p-6 border-b-2 border-purple-400/50 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -205,12 +209,23 @@ export const ArenaMonitor = ({
             </div>
           </div>
         </div>
-        <button
-          onClick={onToggle}
-          className="text-white/70 hover:text-white transition-colors text-3xl hover:rotate-90 duration-300"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-3">
+          {onDisconnect && (
+            <button
+              onClick={onDisconnect}
+              className="bg-red-600/80 hover:bg-red-700/90 text-white px-4 py-2 rounded-lg shadow-lg border-2 border-red-400/50 transition-all duration-200 flex items-center gap-2 text-sm font-semibold"
+            >
+              <span>🔌</span>
+              <span>Disconnect</span>
+            </button>
+          )}
+          <button
+            onClick={onToggle}
+            className="text-white/70 hover:text-white transition-colors text-3xl hover:rotate-90 duration-300"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Content */}

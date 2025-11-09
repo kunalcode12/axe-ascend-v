@@ -4,7 +4,7 @@ import axios from "axios";
 const ARENA_SERVER_URL =
   import.meta.env.VITE_ARENA_SERVER_URL || "wss://airdrop-arcade.onrender.com";
 const GAME_API_URL = "https://airdrop-arcade.onrender.com/api";
-const VORLD_APP_ID = import.meta.env.VITE_VORLD_APP_ID || "";
+const VORLD_APP_ID =  "app_mgs5crer_51c332b3";
 const ARENA_GAME_ID =
   import.meta.env.VITE_ARENA_GAME_ID || "arcade_mhe2itfj_c1567665";
 
@@ -32,9 +32,10 @@ export class ArenaGameService {
   // Initialize game with stream URL
   async initializeGame(streamUrl, userToken) {
     try {
-      this.userToken = userToken;
-      console.log("User Token:", this.userToken);
+      this.userToken = userToken.trim();
+      console.log("User Token:", typeof this.userToken, this.userToken);
       console.log("Stream URL:", streamUrl);
+      // console.log(typeof userToken, userToken);
 
       const response = await axios.post(
         `${GAME_API_URL}/games/init`,
@@ -43,13 +44,14 @@ export class ArenaGameService {
         },
         {
           headers: {
-            Authorization: `Bearer ${userToken}`,
+            Authorization: `Bearer ${this.userToken}`,
             "X-Arena-Arcade-Game-ID": ARENA_GAME_ID,
             "X-Vorld-App-ID": VORLD_APP_ID,
             "Content-Type": "application/json",
           },
         }
       );
+      console.log("Response:", response.data);
 
       this.gameState = response.data.data;
 
@@ -63,6 +65,7 @@ export class ArenaGameService {
         data: this.gameState ?? undefined,
       };
     } catch (error) {
+      console.error("Error initializing game:", error);
       return {
         success: false,
         error: error.response?.data?.message || "Failed to initialize game",
