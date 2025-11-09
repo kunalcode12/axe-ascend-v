@@ -68,9 +68,7 @@ export const UI = () => {
       arenaServiceRef.current = arena;
 
       // Get streamUrl from URL params
-      const streamUrl = new URLSearchParams(window.location.search).get(
-        "streamUrl"
-      );
+      const streamUrl = "https://twitch.tv/empireofbits";
 
       if (!streamUrl) {
         setInitError(
