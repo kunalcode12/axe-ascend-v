@@ -20,6 +20,9 @@ export const UI = () => {
   const [arenaStatus, setArenaStatus] = useState("disconnected");
   const [countdown, setCountdown] = useState(null);
   const [arenaInitialized, setArenaInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initError, setInitError] = useState(null);
+  const [showInitDialog, setShowInitDialog] = useState(true);
 
   // Get wallet and authToken from URL params
   useEffect(() => {
@@ -39,74 +42,71 @@ export const UI = () => {
     }
   }, []);
 
-  // Initialize Arena Service
-  useEffect(() => {
-    const initializeArena = async () => {
-      try {
-        const walletAddress =
-          new URLSearchParams(window.location.search).get("wallet") ||
-          localStorage.getItem("userId");
-        const authToken =
-          new URLSearchParams(window.location.search).get("authToken") ||
-          localStorage.getItem("authToken");
+  // Manual initialization function
+  const initializeArena = async () => {
+    try {
+      setIsInitializing(true);
+      setInitError(null);
 
-        if (!authToken) {
-          console.warn(
-            "Auth token not found. Arena service will not initialize."
-          );
-          return;
-        }
+      const walletAddress =
+        new URLSearchParams(window.location.search).get("wallet") ||
+        localStorage.getItem("userId");
+      const authToken =
+        new URLSearchParams(window.location.search).get("authToken") ||
+        localStorage.getItem("authToken");
 
-        // Create arena service instance
-        const arena = new ArenaGameService();
-        arenaServiceRef.current = arena;
-
-        // Get streamUrl from URL params
-        const streamUrl = new URLSearchParams(window.location.search).get(
-          "streamUrl"
+      if (!authToken) {
+        setInitError(
+          "Auth token not found. Please provide authToken in URL params."
         );
+        setIsInitializing(false);
+        return;
+      }
 
-        if (!streamUrl) {
-          console.warn(
-            "Stream URL not found in URL params. Arena service may not initialize properly."
-          );
-          // Don't initialize if no streamUrl is provided
-          return;
-        }
+      // Create arena service instance
+      const arena = new ArenaGameService();
+      arenaServiceRef.current = arena;
 
-        console.log("Initializing arena service...", {
-          wallet: walletAddress,
-          hasToken: !!authToken,
-          streamUrl,
-        });
+      // Get streamUrl from URL params
+      const streamUrl = new URLSearchParams(window.location.search).get(
+        "streamUrl"
+      );
 
-        // Initialize game
-        const initResult = await arena.initializeGame(streamUrl, authToken);
+      if (!streamUrl) {
+        setInitError(
+          "Stream URL not found. Please provide streamUrl in URL params."
+        );
+        setIsInitializing(false);
+        return;
+      }
 
-        if (initResult.success) {
-          console.log("✅ Arena service initialized:", initResult.data);
-          setArenaStatus("connected");
-          setArenaInitialized(true);
-        } else {
-          console.error("❌ Failed to initialize arena:", initResult.error);
-          setArenaStatus("error");
-        }
-      } catch (error) {
-        console.error("Error initializing arena service:", error);
+      console.log("Initializing arena service...", {
+        wallet: walletAddress,
+        hasToken: !!authToken,
+        streamUrl,
+      });
+
+      // Initialize game
+      const initResult = await arena.initializeGame(streamUrl, authToken);
+
+      if (initResult.success) {
+        console.log("✅ Arena service initialized:", initResult.data);
+        setArenaStatus("connected");
+        setArenaInitialized(true);
+        setShowInitDialog(false);
+      } else {
+        console.error("❌ Failed to initialize arena:", initResult.error);
         setArenaStatus("error");
+        setInitError(initResult.error || "Failed to initialize arena");
       }
-    };
-
-    initializeArena();
-
-    // Cleanup on unmount
-    return () => {
-      if (arenaServiceRef.current) {
-        arenaServiceRef.current.disconnect();
-        arenaServiceRef.current = null;
-      }
-    };
-  }, []);
+    } catch (error) {
+      console.error("Error initializing arena service:", error);
+      setArenaStatus("error");
+      setInitError(error.message || "Error initializing arena service");
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   // Set up arena event listeners (runs after initialization)
   useEffect(() => {
@@ -147,6 +147,8 @@ export const UI = () => {
         ...prev,
         { type: "arena_begins", data, timestamp: new Date() },
       ]);
+      // Auto-open monitor when arena goes live
+      setShowMonitor(true);
     };
 
     // Player boost activated
@@ -251,6 +253,16 @@ export const UI = () => {
     };
   }, [arenaInitialized]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (arenaServiceRef.current) {
+        arenaServiceRef.current.disconnect();
+        arenaServiceRef.current = null;
+      }
+    };
+  }, []);
+
   // Check if game is over
   useEffect(() => {
     if (throws === 0 && !firstGame) {
@@ -330,20 +342,161 @@ export const UI = () => {
         <p className="text-white/60 text-xs">Break the curse</p>
       </div>
 
+      {/* Initialization Dialog */}
+      {showInitDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-30 pointer-events-auto bg-black/90 backdrop-blur-md">
+          <div className="bg-gradient-to-br from-purple-900/95 to-pink-900/95 backdrop-blur-xl p-8 rounded-2xl border-2 border-purple-400/50 max-w-lg w-full mx-4 shadow-2xl animate-fade-in-up">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-4 animate-bounce">🎮</div>
+              <h2 className="text-3xl font-bold text-white mb-2">
+                Initialize Arena
+              </h2>
+              <p className="text-white/70 text-sm">
+                Connect to the arena server to start playing
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-black/40 p-4 rounded-lg border border-purple-400/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white/80 text-sm font-medium">
+                    Status:
+                  </span>
+                  <span
+                    className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                      arenaStatus === "connected"
+                        ? "text-green-300 bg-green-500/20"
+                        : arenaStatus === "error"
+                        ? "text-red-300 bg-red-500/20"
+                        : "text-yellow-300 bg-yellow-500/20"
+                    }`}
+                  >
+                    {arenaStatus === "connected"
+                      ? "✓ Connected"
+                      : arenaStatus === "error"
+                      ? "✗ Error"
+                      : "○ Not Connected"}
+                  </span>
+                </div>
+                {initError && (
+                  <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded text-red-300 text-xs animate-shake">
+                    {initError}
+                  </div>
+                )}
+                {arenaInitialized && (
+                  <div className="mt-3 p-3 bg-green-500/20 border border-green-500/50 rounded text-green-300 text-xs">
+                    ✓ Arena service connected successfully!
+                  </div>
+                )}
+              </div>
+
+              {/* Connection Info */}
+              <div className="bg-black/30 p-3 rounded-lg border border-purple-400/20">
+                <p className="text-white/60 text-xs mb-1">Requirements:</p>
+                <ul className="text-white/50 text-xs space-y-1">
+                  <li>
+                    • Auth Token:{" "}
+                    {localStorage.getItem("authToken")
+                      ? "✓ Found"
+                      : "✗ Missing"}
+                  </li>
+                  <li>
+                    • Stream URL:{" "}
+                    {new URLSearchParams(window.location.search).get(
+                      "streamUrl"
+                    )
+                      ? "✓ Found"
+                      : "✗ Missing"}
+                  </li>
+                  <li>
+                    • Wallet:{" "}
+                    {localStorage.getItem("userId") ||
+                    new URLSearchParams(window.location.search).get("wallet")
+                      ? "✓ Found"
+                      : "✗ Missing"}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={initializeArena}
+                disabled={isInitializing || arenaInitialized}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg"
+              >
+                {isInitializing ? (
+                  <>
+                    <span className="animate-spin text-2xl">⚙️</span>
+                    <span>Initializing...</span>
+                  </>
+                ) : arenaInitialized ? (
+                  <>
+                    <span className="text-2xl">✅</span>
+                    <span>Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl">🚀</span>
+                    <span>Initialize Arena</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex gap-3">
+                {arenaInitialized && (
+                  <button
+                    onClick={() => {
+                      setShowInitDialog(false);
+                    }}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-3 text-lg"
+                  >
+                    <span className="text-2xl">🎯</span>
+                    <span>Continue to Game</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowInitDialog(false);
+                  }}
+                  className={`${
+                    arenaInitialized ? "flex-1" : "w-full"
+                  } bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-3 text-lg`}
+                >
+                  <span>Skip</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className={`p-4 flex flex-col items-center gap-2 md:gap-4 mt-[50vh] animate-fade-in-up opacity-0 animation-delay-1000`}
       >
-        {throws === 0 && firstGame && (
+        {throws === 0 && firstGame && !showInitDialog && (
           <>
             <h1 className="bold text-white/80 text-4xl md:text-5xl font-extrabold text-center">
               🪓 Playing Ground
             </h1>
-            <p className="text-white/70 text-sm">
+            <p className="text-white/70 text-sm text-center max-w-md">
               Become an axe master and break the curse of the temple by
               exploding balloons. 🎈 <br />
+              {arenaInitialized ? (
+                <span className="text-green-400 font-semibold mt-2 block">
+                  ✓ Arena Connected - Ready to Play!
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShowInitDialog(true)}
+                  className="text-purple-400 hover:text-purple-300 font-medium mt-2 underline text-xs"
+                >
+                  Initialize Arena (Optional)
+                </button>
+              )}
             </p>
             <button
-              className="bg-white/80 text-black font-bold px-4 py-2 rounded-lg shadow-md hover:bg-white/100 transition duration-200 pointer-events-auto cursor-pointer"
+              className="bg-gradient-to-r from-white/90 to-white/80 text-black font-bold px-6 py-3 rounded-lg shadow-lg hover:from-white hover:to-white transition-all duration-200 pointer-events-auto cursor-pointer transform hover:scale-105"
               onClick={startGame}
             >
               Start Game
@@ -424,21 +577,21 @@ export const UI = () => {
       )}
 
       {/* Arena Status Indicator */}
-      {arenaStatus !== "disconnected" && (
-        <div className="absolute top-20 left-4 pointer-events-auto">
-          <div className="bg-black/60 backdrop-blur-md px-3 py-2 rounded-lg border border-purple-400/30 flex items-center gap-2">
+      {arenaStatus !== "disconnected" && !showInitDialog && (
+        <div className="absolute top-20 left-4 pointer-events-auto z-20">
+          <div className="bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md px-4 py-2 rounded-lg border-2 border-purple-400/50 flex items-center gap-3 shadow-lg">
             <div
-              className={`w-2 h-2 rounded-full ${
+              className={`w-3 h-3 rounded-full ${
                 arenaStatus === "connected" || arenaStatus === "live"
-                  ? "bg-green-400"
+                  ? "bg-green-400 animate-pulse"
                   : arenaStatus === "countdown"
-                  ? "bg-yellow-400"
+                  ? "bg-yellow-400 animate-pulse"
                   : arenaStatus === "error"
                   ? "bg-red-400"
                   : "bg-gray-400"
               }`}
             />
-            <span className="text-white/80 text-xs font-medium">
+            <span className="text-white font-semibold text-sm">
               {arenaStatus === "connected"
                 ? "Arena Connected"
                 : arenaStatus === "countdown"
@@ -456,11 +609,15 @@ export const UI = () => {
       )}
 
       {/* Arena Monitor */}
-      <ArenaMonitor
-        events={monitorEvents}
-        isOpen={showMonitor}
-        onToggle={() => setShowMonitor(!showMonitor)}
-      />
+      {arenaInitialized && (
+        <ArenaMonitor
+          events={monitorEvents}
+          isOpen={showMonitor}
+          onToggle={() => setShowMonitor(!showMonitor)}
+          arenaStatus={arenaStatus}
+          countdown={countdown}
+        />
+      )}
     </section>
   );
 };
