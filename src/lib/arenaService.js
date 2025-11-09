@@ -2,12 +2,11 @@ import { io } from "socket.io-client";
 import axios from "axios";
 
 const ARENA_SERVER_URL =
-  process.env.NEXT_PUBLIC_ARENA_SERVER_URL ||
-  "wss://airdrop-arcade.onrender.com";
+  import.meta.env.VITE_ARENA_SERVER_URL || "wss://airdrop-arcade.onrender.com";
 const GAME_API_URL = "https://airdrop-arcade.onrender.com/api";
-const VORLD_APP_ID = process.env.NEXT_PUBLIC_VORLD_APP_ID || "";
+const VORLD_APP_ID = import.meta.env.VITE_VORLD_APP_ID || "";
 const ARENA_GAME_ID =
-  process.env.NEXT_PUBLIC_ARENA_GAME_ID || "arcade_mhe2itfj_c1567665";
+  import.meta.env.VITE_ARENA_GAME_ID || "arcade_mhe2itfj_c1567665";
 
 export class ArenaGameService {
   constructor() {
