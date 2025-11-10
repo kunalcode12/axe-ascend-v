@@ -72,18 +72,21 @@ export const UI = () => {
   const giantTargetHits = useGame((state) => state.giantTargetHits);
   const [itemDropNotifications, setItemDropNotifications] = useState([]);
   const [packageDropNotifications, setPackageDropNotifications] = useState([]);
+  const [streamUrl, setStreamUrl] = useState("");
 
-  // Get wallet and authToken from URL params
+  // Get wallet, authToken, and streamUrl from URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const wallet = params.get("wallet");
     const authToken = params.get("authToken");
+    const streamUrlParam = params.get("streamUrl");
 
     localStorage.setItem("userId", wallet);
     localStorage.setItem("authToken", authToken);
 
     console.log("Wallet:", wallet);
     console.log("Auth Token:", authToken);
+    console.log("Stream URL:", streamUrlParam);
 
     if (wallet) {
       localStorage.setItem("userId", wallet);
@@ -91,6 +94,11 @@ export const UI = () => {
 
     if (authToken) {
       localStorage.setItem("authToken", authToken);
+    }
+
+    // Initialize streamUrl from URL params (decode if needed)
+    if (streamUrlParam) {
+      setStreamUrl(decodeURIComponent(streamUrlParam));
     }
   }, []);
 
@@ -114,20 +122,18 @@ export const UI = () => {
         return;
       }
 
-      // Create arena service instance
-      const arena = new ArenaGameService();
-      arenaServiceRef.current = arena;
-
-      // Get streamUrl from URL params
-      const streamUrl = "https://twitch.tv/empireofbits";
-
-      if (!streamUrl) {
+      // Validate streamUrl
+      if (!streamUrl || streamUrl.trim() === "") {
         setInitError(
-          "Stream URL not found. Please provide streamUrl in URL params."
+          "Stream URL is required. Please provide a stream URL."
         );
         setIsInitializing(false);
         return;
       }
+
+      // Create arena service instance
+      const arena = new ArenaGameService();
+      arenaServiceRef.current = arena;
 
       console.log("Initializing arena service...", {
         // wallet: walletAddress,
@@ -735,6 +741,24 @@ export const UI = () => {
                 )}
               </div>
 
+              {/* Stream URL Input */}
+              <div className="bg-black/40 p-4 rounded-lg border border-purple-400/30">
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Stream URL <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={streamUrl}
+                  onChange={(e) => setStreamUrl(e.target.value)}
+                  placeholder="https://twitch.tv/empireofbits"
+                  className="w-full bg-black/60 border border-purple-400/50 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  disabled={isInitializing || arenaInitialized}
+                />
+                <p className="text-white/50 text-xs mt-2">
+                  Enter the Twitch stream URL to connect to the arena
+                </p>
+              </div>
+
               {/* Connection Info */}
               <div className="bg-black/30 p-3 rounded-lg border border-purple-400/20">
                 <p className="text-white/60 text-xs mb-1">Requirements:</p>
@@ -747,10 +771,8 @@ export const UI = () => {
                   </li>
                   <li>
                     • Stream URL:{" "}
-                    {new URLSearchParams(window.location.search).get(
-                      "streamUrl"
-                    )
-                      ? "✓ Found"
+                    {streamUrl && streamUrl.trim() !== ""
+                      ? "✓ Provided"
                       : "✗ Missing"}
                   </li>
                   <li>
@@ -767,7 +789,7 @@ export const UI = () => {
             <div className="space-y-3">
               <button
                 onClick={initializeArena}
-                disabled={isInitializing || arenaInitialized}
+                disabled={isInitializing || arenaInitialized || !streamUrl || streamUrl.trim() === ""}
                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg"
               >
                 {isInitializing ? (
