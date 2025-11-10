@@ -696,7 +696,7 @@ export const UI = () => {
       const actualScore = balloonsHit * 10 + targetHit * 50 + arenaPoints;
 
       const response = await fetch(
-        `http://localhost:3001/api/v1/users/${userId}/points`,
+        `https://backend.empireofbits.fun/api/v1/users/${userId}/points`,
         {
           method: "PUT",
           headers: {
