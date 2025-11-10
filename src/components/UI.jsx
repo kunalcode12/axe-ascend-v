@@ -50,7 +50,7 @@ export const UI = () => {
   const [initError, setInitError] = useState(null);
   const [showInitDialog, setShowInitDialog] = useState(true);
   const [boostNotifications, setBoostNotifications] = useState([]);
-  
+
   // Game state hooks
   const arenaPoints = useGame((state) => state.arenaPoints);
   const setMonitorOpen = useGame((state) => state.setMonitorOpen);
@@ -68,7 +68,9 @@ export const UI = () => {
   const balloonStreak = useGame((state) => state.balloonStreak);
   const giantTargetActive = useGame((state) => state.giantTargetActive);
   const giantTargetMultiplier = useGame((state) => state.giantTargetMultiplier);
-  const giantTargetTimeRemaining = useGame((state) => state.giantTargetTimeRemaining);
+  const giantTargetTimeRemaining = useGame(
+    (state) => state.giantTargetTimeRemaining
+  );
   const giantTargetHits = useGame((state) => state.giantTargetHits);
   const [itemDropNotifications, setItemDropNotifications] = useState([]);
   const [packageDropNotifications, setPackageDropNotifications] = useState([]);
@@ -124,9 +126,7 @@ export const UI = () => {
 
       // Validate streamUrl
       if (!streamUrl || streamUrl.trim() === "") {
-        setInitError(
-          "Stream URL is required. Please provide a stream URL."
-        );
+        setInitError("Stream URL is required. Please provide a stream URL.");
         setIsInitializing(false);
         return;
       }
@@ -210,7 +210,7 @@ export const UI = () => {
     // Player boost activated
     arena.onPlayerBoostActivated = (data) => {
       console.log("Player boost activated:", data);
-      
+
       const boostAmount =
         Number(data?.boostAmount) || Number(data?.currentCyclePoints) || 0;
       const boosterName = data?.boosterUsername || data?.playerName || "Viewer";
@@ -248,7 +248,7 @@ export const UI = () => {
     // Boost cycle update
     arena.onBoostCycleUpdate = (data) => {
       console.log("Boost cycle update:", data);
-      
+
       // Check if this cycle update contains boost amounts for the player
       const boostAmount =
         Number(data?.boostAmount) || Number(data?.currentCyclePoints) || 0;
@@ -284,7 +284,7 @@ export const UI = () => {
     // Boost cycle complete
     arena.onBoostCycleComplete = (data) => {
       console.log("Boost cycle complete:", data);
-      
+
       // Check if cycle complete gives points
       const boostAmount =
         Number(data?.boostAmount) || Number(data?.totalPoints) || 0;
@@ -319,58 +319,90 @@ export const UI = () => {
     // Package drop
     arena.onPackageDrop = (data) => {
       console.log("Package drop:", data);
-      
+
       // Extract package information from playerPackageDrops
       const playerPackageDrops = data?.playerPackageDrops || [];
-      
+
       // Process each player's package drops
       playerPackageDrops.forEach((playerDrop) => {
         const eligiblePackages = playerDrop?.eligiblePackages || [];
-        
+
         eligiblePackages.forEach((pkg) => {
           const packageName = pkg?.name || "Package";
           const packageCost = pkg?.cost || 0;
           const playerName = playerDrop?.playerName || "Player";
           const stats = pkg?.stats || [];
-          
+
           // Check if this is a Balloon Storm / Balloon Rush package
-          const isBalloonStorm = 
+          const isBalloonStorm =
             packageName.toLowerCase().includes("balloon storm") ||
             packageName.toLowerCase().includes("balloon rush") ||
-            stats.some(stat => stat.name === "Balloon Rush" || stat.name === "Balloon Storm");
-          
+            stats.some(
+              (stat) =>
+                stat.name === "Balloon Rush" || stat.name === "Balloon Storm"
+            );
+
           // Check if this is a Giant Target / Mega Target package
-          const isGiantTarget = 
+          const isGiantTarget =
             packageName.toLowerCase().includes("giant target") ||
             packageName.toLowerCase().includes("mega target") ||
-            stats.some(stat => stat.name === "Mega Target" || stat.name === "Giant Target");
-          
+            stats.some(
+              (stat) =>
+                stat.name === "Mega Target" || stat.name === "Giant Target"
+            );
+
           // Get duration from stats if available (default 8 seconds for storm, 10 for giant target)
-          const stormDuration = stats.find(stat => 
-            stat.name === "Balloon Rush" || stat.name === "Balloon Storm"
-          )?.currentValue 
-            ? Math.min(Math.max(stats.find(stat => stat.name === "Balloon Rush" || stat.name === "Balloon Storm").currentValue, 6), 10) // Clamp between 6-10 seconds
+          const stormDuration = stats.find(
+            (stat) =>
+              stat.name === "Balloon Rush" || stat.name === "Balloon Storm"
+          )?.currentValue
+            ? Math.min(
+                Math.max(
+                  stats.find(
+                    (stat) =>
+                      stat.name === "Balloon Rush" ||
+                      stat.name === "Balloon Storm"
+                  ).currentValue,
+                  6
+                ),
+                10
+              ) // Clamp between 6-10 seconds
             : 8; // Default 8 seconds
-          
+
           // Get balloon count from stats (default 30 balloons)
-          const balloonCount = stats.find(stat => 
-            stat.name === "Balloon Rush" || stat.name === "Balloon Storm"
-          )?.currentValue 
-            ? Math.min(Math.max(stats.find(stat => stat.name === "Balloon Rush" || stat.name === "Balloon Storm").currentValue * 2, 20), 50) // 20-50 balloons
+          const balloonCount = stats.find(
+            (stat) =>
+              stat.name === "Balloon Rush" || stat.name === "Balloon Storm"
+          )?.currentValue
+            ? Math.min(
+                Math.max(
+                  stats.find(
+                    (stat) =>
+                      stat.name === "Balloon Rush" ||
+                      stat.name === "Balloon Storm"
+                  ).currentValue * 2,
+                  20
+                ),
+                50
+              ) // 20-50 balloons
             : 30; // Default 30 balloons
-          
+
           // Get giant target duration and multiplier from stats
-          const giantTargetStat = stats.find(stat => 
-            stat.name === "Mega Target" || stat.name === "Giant Target"
+          const giantTargetStat = stats.find(
+            (stat) =>
+              stat.name === "Mega Target" || stat.name === "Giant Target"
           );
-          const giantTargetDuration = giantTargetStat?.currentValue 
+          const giantTargetDuration = giantTargetStat?.currentValue
             ? Math.min(Math.max(giantTargetStat.currentValue, 8), 12) // Clamp between 8-12 seconds
             : 10; // Default 10 seconds
           // Multiplier: use stat value / 10, clamped between x2-x5
-          const giantTargetMultiplier = giantTargetStat?.currentValue 
-            ? Math.min(Math.max(Math.floor(giantTargetStat.currentValue / 10), 2), 5) // x2-x5 multiplier
+          const giantTargetMultiplier = giantTargetStat?.currentValue
+            ? Math.min(
+                Math.max(Math.floor(giantTargetStat.currentValue / 10), 2),
+                5
+              ) // x2-x5 multiplier
             : 3; // Default x3 multiplier
-          
+
           // Show notification (use same structure as item drop notifications)
           const notificationId = Date.now() + Math.random();
           setPackageDropNotifications((prev) => [
@@ -383,20 +415,20 @@ export const UI = () => {
               stats,
             },
           ]);
-          
+
           // Remove notification after 2.3 seconds
           setTimeout(() => {
             setPackageDropNotifications((prev) =>
               prev.filter((n) => n.id !== notificationId)
             );
           }, 2300);
-          
+
           // Trigger Balloon Storm effect if applicable
           if (isBalloonStorm) {
             console.log("🎈 Balloon Storm effect triggered!");
             triggerBalloonStorm(stormDuration, balloonCount);
           }
-          
+
           // Trigger Giant Target effect if applicable
           if (isGiantTarget) {
             console.log("🎯 Giant Target effect triggered!");
@@ -404,7 +436,7 @@ export const UI = () => {
           }
         });
       });
-      
+
       setMonitorEvents((prev) => [
         ...prev,
         { type: "package_drop", data, timestamp: new Date() },
@@ -414,50 +446,68 @@ export const UI = () => {
     // Immediate item drop
     arena.onImmediateItemDrop = (data) => {
       console.log("Immediate item drop:", data);
-      
+
       // Extract item information
-      const itemName = data?.itemName || data?.item?.name || data?.package?.name || "Item";
+      const itemName =
+        data?.itemName || data?.item?.name || data?.package?.name || "Item";
       const cost = data?.cost || data?.price || null;
       const targetPlayerName = data?.targetPlayerName || "Player";
-      const stats = data?.item?.stats || data?.package?.stats || data?.stats || [];
-      
+      const stats =
+        data?.item?.stats || data?.package?.stats || data?.stats || [];
+
       // Check if this is a Bladefall item (Rain of Mini-Axes)
-      const isBladefall = 
+      const isBladefall =
         itemName.toLowerCase().includes("rain of mini-axes") ||
         itemName.toLowerCase().includes("bladefall") ||
-        stats.some(stat => stat.name === "Bladefall");
+        stats.some((stat) => stat.name === "Bladefall");
 
       // Check if this is a Clone Throw item
-      const isCloneThrow = 
+      const isCloneThrow =
         itemName.toLowerCase().includes("clone throw") ||
         itemName.toLowerCase().includes("echo throw") ||
-        stats.some(stat => stat.name === "Echo Throw" || stat.name === "Clone Throw");
-      
+        stats.some(
+          (stat) => stat.name === "Echo Throw" || stat.name === "Clone Throw"
+        );
+
       // Get throws count from stat value if available
-      const cloneThrowCount = stats.find(stat => 
-        stat.name === "Echo Throw" || stat.name === "Clone Throw"
-      )?.currentValue || 3;
+      const cloneThrowCount =
+        stats.find(
+          (stat) => stat.name === "Echo Throw" || stat.name === "Clone Throw"
+        )?.currentValue || 3;
 
       // Check if this is a Slow-Motion Zone / Time Warp item
-      const isSlowMotion = 
+      const isSlowMotion =
         itemName.toLowerCase().includes("slow-motion zone") ||
         itemName.toLowerCase().includes("slow motion") ||
         itemName.toLowerCase().includes("time warp") ||
-        stats.some(stat => stat.name === "Time Warp" || stat.name === "Slow Motion");
-      
+        stats.some(
+          (stat) => stat.name === "Time Warp" || stat.name === "Slow Motion"
+        );
+
       // Check if this is an Extra-Axe item
-      const isExtraAxe = 
+      const isExtraAxe =
         itemName.toLowerCase().includes("extra-axe") ||
         itemName.toLowerCase().includes("extra axe") ||
-        stats.some(stat => stat.name === "Plus One" || stat.name === "Extra Axe");
-      
+        stats.some(
+          (stat) => stat.name === "Plus One" || stat.name === "Extra Axe"
+        );
+
       // Get duration and time scale from stats if available
-      const slowMotionDuration = stats.find(stat => 
-        stat.name === "Time Warp" || stat.name === "Slow Motion"
-      )?.currentValue 
-        ? Math.min(Math.max(stats.find(stat => stat.name === "Time Warp" || stat.name === "Slow Motion").currentValue / 10, 4), 6) // Clamp between 4-6 seconds
+      const slowMotionDuration = stats.find(
+        (stat) => stat.name === "Time Warp" || stat.name === "Slow Motion"
+      )?.currentValue
+        ? Math.min(
+            Math.max(
+              stats.find(
+                (stat) =>
+                  stat.name === "Time Warp" || stat.name === "Slow Motion"
+              ).currentValue / 10,
+              4
+            ),
+            6
+          ) // Clamp between 4-6 seconds
         : 5; // Default 5 seconds
-      
+
       // Time scale: 0.4-0.6x (default 0.5x = half speed)
       const slowMotionTimeScale = 0.5;
 
@@ -640,11 +690,13 @@ export const UI = () => {
         return;
       }
 
+      const userId = walletAddress;
+
       // Calculate points to deduct (you can adjust this logic)
       const actualScore = balloonsHit * 10 + targetHit * 50 + arenaPoints;
 
       const response = await fetch(
-        `http://localhost:3001/api/v1/walletUser/${walletAddress}/points`,
+        `http://localhost:3001/api/v1/users/${userId}/points`,
         {
           method: "PUT",
           headers: {
@@ -789,7 +841,12 @@ export const UI = () => {
             <div className="space-y-3">
               <button
                 onClick={initializeArena}
-                disabled={isInitializing || arenaInitialized || !streamUrl || streamUrl.trim() === ""}
+                disabled={
+                  isInitializing ||
+                  arenaInitialized ||
+                  !streamUrl ||
+                  streamUrl.trim() === ""
+                }
                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-lg"
               >
                 {isInitializing ? (
@@ -949,33 +1006,33 @@ export const UI = () => {
       )}
 
       {/* Arena Status Indicator - Only show when countdown is not displayed (to avoid duplication) */}
-      {arenaStatus !== "disconnected" && 
-       arenaStatus !== "countdown" && 
-       arenaStatus !== "live" && 
-       !showInitDialog && (
-        <div className="absolute top-20 left-4 pointer-events-auto z-20">
-          <div className="bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md px-4 py-2 rounded-lg border-2 border-purple-400/50 flex items-center gap-3 shadow-lg">
-            <div
-              className={`w-3 h-3 rounded-full ${
-                arenaStatus === "connected"
-                  ? "bg-green-400 animate-pulse"
-                  : arenaStatus === "error"
-                  ? "bg-red-400"
-                  : "bg-gray-400"
-              }`}
-            />
-            <span className="text-white font-semibold text-sm">
-              {arenaStatus === "connected"
-                ? "Arena Connected"
-                : arenaStatus === "completed"
-                ? "Arena Completed"
-                : arenaStatus === "stopped"
-                ? "Arena Stopped"
-                : "Arena Error"}
-            </span>
+      {arenaStatus !== "disconnected" &&
+        arenaStatus !== "countdown" &&
+        arenaStatus !== "live" &&
+        !showInitDialog && (
+          <div className="absolute top-20 left-4 pointer-events-auto z-20">
+            <div className="bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md px-4 py-2 rounded-lg border-2 border-purple-400/50 flex items-center gap-3 shadow-lg">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  arenaStatus === "connected"
+                    ? "bg-green-400 animate-pulse"
+                    : arenaStatus === "error"
+                    ? "bg-red-400"
+                    : "bg-gray-400"
+                }`}
+              />
+              <span className="text-white font-semibold text-sm">
+                {arenaStatus === "connected"
+                  ? "Arena Connected"
+                  : arenaStatus === "completed"
+                  ? "Arena Completed"
+                  : arenaStatus === "stopped"
+                  ? "Arena Stopped"
+                  : "Arena Error"}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Arena Monitor */}
       {arenaInitialized && (
@@ -1006,7 +1063,7 @@ export const UI = () => {
           setItemDropNotifications((prev) => prev.filter((n) => n.id !== id));
         }}
       />
-      
+
       {/* Package Drop Notifications - Positioned below item drop notifications */}
       {packageDropNotifications.length > 0 && (
         <div
@@ -1025,14 +1082,16 @@ export const UI = () => {
               <ItemDropNotificationManager
                 notifications={[notification]}
                 onRemove={(id) => {
-                  setPackageDropNotifications((prev) => prev.filter((n) => n.id !== id));
+                  setPackageDropNotifications((prev) =>
+                    prev.filter((n) => n.id !== id)
+                  );
                 }}
               />
             </div>
           ))}
         </div>
       )}
-      
+
       {/* Balloon Streak Counter */}
       {balloonStreak > 0 && (
         <div className="fixed top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-40 animate-fade-in-up">
@@ -1040,8 +1099,12 @@ export const UI = () => {
             <div className="flex items-center gap-4">
               <span className="text-4xl animate-bounce">🎈</span>
               <div className="flex flex-col">
-                <p className="text-white font-bold text-xl tracking-wide">BALLOON STREAK!</p>
-                <p className="text-yellow-300 font-black text-4xl drop-shadow-lg">{balloonStreak}x</p>
+                <p className="text-white font-bold text-xl tracking-wide">
+                  BALLOON STREAK!
+                </p>
+                <p className="text-yellow-300 font-black text-4xl drop-shadow-lg">
+                  {balloonStreak}x
+                </p>
               </div>
               {balloonStreak >= 5 && (
                 <span className="text-3xl animate-spin">✨</span>
@@ -1050,7 +1113,7 @@ export const UI = () => {
           </div>
         </div>
       )}
-      
+
       {/* Giant Target UI - Countdown and Multiplier */}
       {giantTargetActive && (
         <div className="fixed top-32 left-1/2 transform -translate-x-1/2 pointer-events-none z-40 animate-fade-in-down">
@@ -1058,7 +1121,9 @@ export const UI = () => {
             <div className="flex items-center gap-4">
               <span className="text-4xl animate-spin">🎯</span>
               <div className="flex flex-col items-center">
-                <p className="text-white font-bold text-xl tracking-wide">GIANT TARGET ACTIVE!</p>
+                <p className="text-white font-bold text-xl tracking-wide">
+                  GIANT TARGET ACTIVE!
+                </p>
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex flex-col items-center">
                     <p className="text-yellow-300 font-black text-3xl drop-shadow-lg">
@@ -1068,11 +1133,13 @@ export const UI = () => {
                   </div>
                   <div className="w-px h-8 bg-white/30"></div>
                   <div className="flex flex-col items-center">
-                    <p className={`font-black text-3xl drop-shadow-lg ${
-                      giantTargetTimeRemaining <= 3 
-                        ? "text-red-400 animate-pulse" 
-                        : "text-yellow-300"
-                    }`}>
+                    <p
+                      className={`font-black text-3xl drop-shadow-lg ${
+                        giantTargetTimeRemaining <= 3
+                          ? "text-red-400 animate-pulse"
+                          : "text-yellow-300"
+                      }`}
+                    >
                       {giantTargetTimeRemaining}s
                     </p>
                     <p className="text-white/80 text-xs">TIME LEFT</p>
@@ -1112,45 +1179,47 @@ export const UI = () => {
       )}
 
       {/* Live Countdown Display - Always visible when countdown is active */}
-      {countdown !== null && arenaStatus !== "disconnected" && !showInitDialog && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
-          <div className="bg-gradient-to-r from-purple-600/95 to-pink-600/95 backdrop-blur-xl px-8 py-4 rounded-2xl border-2 border-purple-400/60 shadow-2xl flex items-center gap-4">
-            <div
-              className={`w-4 h-4 rounded-full ${
-                arenaStatus === "live"
-                  ? "bg-green-400 animate-pulse"
-                  : arenaStatus === "countdown"
-                  ? "bg-yellow-400 animate-pulse"
-                  : "bg-gray-400"
-              }`}
-            />
-            <div className="flex flex-col items-start">
-              <span className="text-white/90 text-sm font-semibold uppercase tracking-wide">
-                {arenaStatus === "countdown"
-                  ? "⚡ Arena Starting In"
-                  : arenaStatus === "live"
-                  ? "🔥 Arena Cycle"
-                  : "Arena"}
-              </span>
-              <span className="text-white font-black text-4xl tracking-tight">
-                {countdown}s
-              </span>
-            </div>
-            {arenaStatus === "live" && (
-              <div className="ml-4 pl-4 border-l-2 border-white/30">
-                <span className="text-white/70 text-xs">Live Now!</span>
+      {countdown !== null &&
+        arenaStatus !== "disconnected" &&
+        !showInitDialog && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
+            <div className="bg-gradient-to-r from-purple-600/95 to-pink-600/95 backdrop-blur-xl px-8 py-4 rounded-2xl border-2 border-purple-400/60 shadow-2xl flex items-center gap-4">
+              <div
+                className={`w-4 h-4 rounded-full ${
+                  arenaStatus === "live"
+                    ? "bg-green-400 animate-pulse"
+                    : arenaStatus === "countdown"
+                    ? "bg-yellow-400 animate-pulse"
+                    : "bg-gray-400"
+                }`}
+              />
+              <div className="flex flex-col items-start">
+                <span className="text-white/90 text-sm font-semibold uppercase tracking-wide">
+                  {arenaStatus === "countdown"
+                    ? "⚡ Arena Starting In"
+                    : arenaStatus === "live"
+                    ? "🔥 Arena Cycle"
+                    : "Arena"}
+                </span>
+                <span className="text-white font-black text-4xl tracking-tight">
+                  {countdown}s
+                </span>
               </div>
-            )}
+              {arenaStatus === "live" && (
+                <div className="ml-4 pl-4 border-l-2 border-white/30">
+                  <span className="text-white/70 text-xs">Live Now!</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Slow Motion Visual Effects - Vignette and Motion Blur Overlay */}
       {slowMotionActive && (
         <>
           {/* Vignette effect - dark edges */}
           <div className="fixed inset-0 pointer-events-none z-50 mix-blend-multiply">
-            <div 
+            <div
               className="absolute inset-0"
               style={{
                 background: `radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.6) 100%)`,
@@ -1158,9 +1227,9 @@ export const UI = () => {
               }}
             />
           </div>
-          
+
           {/* Motion blur effect overlay */}
-          <div 
+          <div
             className="fixed inset-0 pointer-events-none z-40"
             style={{
               background: "rgba(100, 150, 255, 0.1)",
