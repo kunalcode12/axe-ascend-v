@@ -158,7 +158,10 @@ export class ArenaGameService {
       console.error("Error initializing game:", error);
       return {
         success: false,
-        error: error.response?.data?.message || "Failed to initialize game",
+        error:
+          error.response?.data?.error?.message ||
+          error.response?.data?.message ||
+          "Failed to initialize game",
       };
     }
   }

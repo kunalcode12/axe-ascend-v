@@ -76,6 +76,18 @@ export const UI = () => {
   const [packageDropNotifications, setPackageDropNotifications] = useState([]);
   const [streamUrl, setStreamUrl] = useState("");
   const [sessionMeta, setSessionMeta] = useState(null);
+  const [showStreamerRoleModal, setShowStreamerRoleModal] = useState(false);
+
+  const isActiveStreamerRoleError = (message) => {
+    if (typeof message !== "string") return false;
+    const m = message.toLowerCase();
+    return (
+      m.includes("active streamer role required") ||
+      m.includes("streamer role required")
+    );
+  };
+
+  const VORLD_TV_URL = "https://vorld.tv/";
 
   // Get wallet, authToken, and streamUrl from URL params
   useEffect(() => {
@@ -110,6 +122,7 @@ export const UI = () => {
     try {
       setIsInitializing(true);
       setInitError(null);
+      setShowStreamerRoleModal(false);
 
       const walletAddress =
         new URLSearchParams(window.location.search).get("wallet") ||
@@ -165,7 +178,12 @@ export const UI = () => {
       } else {
         console.error("❌ Failed to initialize arena:", initResult.error);
         setArenaStatus("error");
-        setInitError(initResult.error || "Failed to initialize arena");
+        const errText =
+          initResult.error || "Failed to initialize arena";
+        setInitError(errText);
+        if (isActiveStreamerRoleError(errText)) {
+          setShowStreamerRoleModal(true);
+        }
       }
     } catch (error) {
       console.error("Error initializing arena service:", error);
@@ -757,6 +775,57 @@ export const UI = () => {
         <div className="w-20 h-px bg-white/60"></div>
         <p className="text-white/60 text-xs">Break the curse</p>
       </div>
+
+      {/* Streamer role hint (403 FORBIDDEN from sessions API) */}
+      {showStreamerRoleModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-auto bg-black/80 backdrop-blur-sm px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="streamer-role-modal-title"
+        >
+          <div className="bg-gradient-to-br from-slate-900/98 to-purple-950/98 border border-amber-500/40 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
+            <h3
+              id="streamer-role-modal-title"
+              className="text-xl font-bold text-white mb-2"
+            >
+              Streamer mode required
+            </h3>
+            <p className="text-white/75 text-sm mb-4 leading-relaxed">
+              Your account needs an active streamer role to create an arena
+              session. Open{" "}
+              <a
+                href={VORLD_TV_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-300 underline hover:text-amber-200 font-medium"
+              >
+                vorld.tv
+              </a>
+              , go to your profile, and enable streamer mode. Then try
+              initializing the arena again. You can still skip this dialog and
+              play the game as before.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={VORLD_TV_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition-all"
+              >
+                Open vorld.tv
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowStreamerRoleModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/15 text-white font-semibold py-3 px-4 rounded-xl border border-white/20 transition-all"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Initialization Dialog */}
       {showInitDialog && (
