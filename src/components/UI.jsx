@@ -75,6 +75,7 @@ export const UI = () => {
   const [itemDropNotifications, setItemDropNotifications] = useState([]);
   const [packageDropNotifications, setPackageDropNotifications] = useState([]);
   const [streamUrl, setStreamUrl] = useState("");
+  const [sessionMeta, setSessionMeta] = useState(null);
 
   // Get wallet, authToken, and streamUrl from URL params
   useEffect(() => {
@@ -147,6 +148,17 @@ export const UI = () => {
 
       if (initResult.success) {
         console.log("✅ Arena service initialized:", initResult.data);
+        setSessionMeta(initResult.data || null);
+
+        // Refresh once with get-session data so UI shows latest session details.
+        const sessionId = initResult?.data?.sessionId || initResult?.data?.gameId;
+        if (sessionId) {
+          const detailsResult = await arena.getGameDetails(sessionId);
+          if (detailsResult?.success && detailsResult?.data) {
+            setSessionMeta(detailsResult.data);
+          }
+        }
+
         setArenaStatus("connected");
         setArenaInitialized(true);
         setShowInitDialog(false);
@@ -180,7 +192,7 @@ export const UI = () => {
       setCountdown(data.secondsRemaining || data.countdown || 60);
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "arena_countdown_started", data, timestamp: new Date() },
+        { type: "session_started", data, timestamp: new Date() },
       ]);
     };
 
@@ -191,7 +203,7 @@ export const UI = () => {
       setCountdown(secondsRemaining);
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "countdown_update", data, timestamp: new Date() },
+        { type: "countdown", data, timestamp: new Date() },
       ]);
     };
 
@@ -201,7 +213,7 @@ export const UI = () => {
       setArenaStatus("live");
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "arena_begins", data, timestamp: new Date() },
+        { type: "arena_toggled", data, timestamp: new Date() },
       ]);
       // Auto-open monitor when arena goes live
       setShowMonitor(true);
@@ -234,7 +246,7 @@ export const UI = () => {
 
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "player_boost_activated", data, timestamp: new Date() },
+        { type: "boost_activated", data, timestamp: new Date() },
       ]);
 
       // Remove notification after 1.3 seconds (1s display + 0.3s fade)
@@ -439,7 +451,7 @@ export const UI = () => {
 
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "package_drop", data, timestamp: new Date() },
+        { type: "package_unlocked", data, timestamp: new Date() },
       ]);
     };
 
@@ -585,7 +597,7 @@ export const UI = () => {
       setArenaStatus("completed");
       setMonitorEvents((prev) => [
         ...prev,
-        { type: "game_completed", data, timestamp: new Date() },
+        { type: "session_ended", data, timestamp: new Date() },
       ]);
     };
 
@@ -647,6 +659,7 @@ export const UI = () => {
     setCountdown(null);
     setBoostNotifications([]);
     setItemDropNotifications([]);
+    setSessionMeta(null);
     // Note: We keep arenaPoints in game state as they're part of the score
   };
 
@@ -696,7 +709,7 @@ export const UI = () => {
       const actualScore = balloonsHit * 10 + targetHit * 50 + arenaPoints;
 
       const response = await fetch(
-        `https://backend.empireofbits.fun/api/v1/users/${userId}/points`,
+        `https://backend-em-b0an.onrender.com/api/v1/users/${userId}/points`,
         {
           method: "PUT",
           headers: {
@@ -719,7 +732,7 @@ export const UI = () => {
 
       // Wait a bit before redirecting
       setTimeout(() => {
-        window.location.href = `https://empireofbits.fun/?gameWon=true&gameName=AxeAscend&pointsEarned=${actualScore}`;
+        window.location.href = `https://empireofbits.xyz/?gameWon=true&gameName=AxeAscend&pointsEarned=${actualScore}`;
       }, 3000);
     } catch (error) {
       console.error("Error deducting points:", error);
@@ -836,6 +849,27 @@ export const UI = () => {
                   </li>
                 </ul>
               </div>
+
+              {/* Session Info */}
+              {sessionMeta?.sessionId && (
+                <div className="bg-emerald-950/40 p-3 rounded-lg border border-emerald-400/30">
+                  <p className="text-emerald-300 text-xs font-semibold mb-2">
+                    Session Details
+                  </p>
+                  <div className="text-white/70 text-xs space-y-1 break-all">
+                    <p>Session ID: {sessionMeta.sessionId}</p>
+                    <p>Status: {sessionMeta.status || "pending"}</p>
+                    {sessionMeta.streamerUsername && (
+                      <p>Streamer: {sessionMeta.streamerUsername}</p>
+                    )}
+                    {sessionMeta.sessionTitle && (
+                      <p>Title: {sessionMeta.sessionTitle}</p>
+                    )}
+                    <p>Viewer Count: {sessionMeta.viewerCount ?? 0}</p>
+                    <p>Total Coins Spent: {sessionMeta.totalCoinsSpent ?? 0}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -994,7 +1028,7 @@ export const UI = () => {
               <button
                 onClick={() =>
                   (window.location.href =
-                    "https://empireofbits.fun/gameWon=true&gameName=AxeAscend&pointsEarned=100")
+                    "https://empireofbits.xyz/?gameWon=true&gameName=AxeAscend&pointsEarned=100")
                 }
                 className="bg-white/80 text-black font-bold px-6 py-2 rounded-lg shadow-md hover:bg-white/100 transition duration-200 cursor-pointer"
               >

@@ -42,7 +42,11 @@ export const ArenaMonitor = ({
     e.type.includes("countdown")
   );
   const arenaEvents = events.filter(
-    (e) => e.type === "arena_begins" || e.type === "arena_countdown_started"
+    (e) =>
+      e.type === "arena_begins" ||
+      e.type === "arena_countdown_started" ||
+      e.type === "session_started" ||
+      e.type === "arena_toggled"
   );
   const boostEvents = events.filter((e) => e.type.includes("boost"));
   const dropEvents = events.filter(
